@@ -1,0 +1,251 @@
+---
+title: "Reproducible data analysis of Finstrlová et al. (2022)"
+format: gfm
+execute: 
+  cache: refresh
+  freeze: auto
+---
+
+All the libraries are loaded in the `deseq_processing.R` script including the `tidyverse`, `DESeq2` and `CompleHeatmap` libraries.
+
+```{r}
+#| label: loading-libraries
+#| warning: false
+#| message: false
+source("scripts/deseq_processing.R")
+```
+
+## Genome Annotation
+
+```{.bash}
+pharokka.py -i phageK-NC.fasta -o phanotate-annotation -p phanotate-phageK-NC -g phanotate -d pharokka-db/ -t 8
+```
+
+## Mapping
+
+### Downloading data
+
+Data was downloaded from the SRA explorer page using a given list of `curl` lines as in the `data-links.sh` script.
+
+### Trimming with Trimmomatic
+
+Quality filtering and trimming was done using [trimmomatic](https://github.com/usadellab/Trimmomatic)
+
+```{.bash}
+function trimming() {
+    trimmomatic SE -threads 8\
+    $1\
+    Trimmed-${1}\
+    ILLUMINACLIP:TruSeq3-SE:2:30:10\
+    SLIDINGWINDOW:4:15\
+    LEADING:22\
+    TRAILING:22\
+    MINLEN:20\
+    AVGQUAL:22
+}
+```
+
+```{.bash}
+for i in SRR*gz; 
+    do trimming $i; 
+done
+```
+
+### Map alignment with STAR
+
+```{.bash}
+STAR --runMode genomeGenerate\
+	--runThreadN 32\
+	--genomeDir $GENOME_DIR\
+	--genomeFastaFiles $GENOME_FASTA\
+	--genomeSAindexNbases 7\
+	
+STAR --runMode alignReads\
+	--runThreadN 32\
+	--genomeDir $GENOME_DIR\
+	--readFilesManifest $READS_MANIFEST\
+	--readFilesCommand gunzip -c\
+	--readFilesPrefix $READS_PREFIX\
+	--outFilterMultimapScoreRange 0\
+	--outFilterMatchNmin 30\
+	--outFilterMatchNminOverLread 0.95\
+	--outFilterMismatchNoverLmax 0.02\
+	--outFilterMismatchNoverReadLmax 1\
+	--alignIntronMin 20\
+	--alignIntronMax 1\
+	--outSAMtype BAM SortedByCoordinate\
+	--limitBAMsortRAM 1096346262\
+	--outBAMcompression 10\
+	--bamRemoveDuplicatesType UniqueIdentical\
+	--outSAMattributes NH HI AS nM RG\
+	
+samtools index Aligned.sortedByCoord.out.bam
+```
+
+### Counting expression
+
+## Coverage analysis
+
+```{r}
+forwardfiles <- dir_ls(path = "grouped-mapping/mosdepth-counts-forward/", regexp = "*.gz$")
+
+reversefiles <- dir_ls(path = "grouped-mapping/mosdepth-counts-reverse/", regexp = "*.gz$")
+
+forward <- forwardfiles |>
+  map_df(bed_read, .id = "filename") |>
+  as_tibble() |>
+  mutate(filename = as.factor(filename), strand = '-')
+
+reverse <- reversefiles |>
+  map_df(bed_read, .id = "filename") |>
+  as_tibble() |>
+  mutate(filename = as.factor(filename), strand = '+')
+  
+data <- rbind(reverse, forward) |> 
+  mutate(
+    timepoint = as.factor(str_extract(filename, "\\d+"))
+  ) |> 
+  mutate(timepoint = fct_relevel(timepoint, c('2','5','10','20','30'))) |>
+  filter(coverage != 0) |> 
+  mutate(sqrt_cov = sqrt(coverage))
+
+data
+```
+
+```{r}
+ggplot(data, aes(x = start, y = timepoint, height = coverage)) +
+  geom_density_ridges(aes(fill = strand, color = strand),
+    stat = "identity",
+    scale = 5,
+    alpha = .7,
+    size = .1
+  ) +
+  scale_y_discrete(expand = c(0, 0)) +
+  scale_x_continuous(expand = c(0, 0), breaks = c(0, 20000, 40000, 60000, 80000, 100000, 120000, 140000)) +
+  theme_ridges() +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = c("#F4B6B7", "#BAD4B7")) +
+  scale_color_manual(values = c("#F4B6B7", "#BAD4B7"))
+
+ggsave("figs/ridges-perbase.pdf", width = 9, height = 9, dpi = 200)
+```
+
+## Differential gene expression analyses
+
+### NCBI annotation
+
+Generate the expression data file from all file counts
+
+```{r}
+#| message: false
+#| warning: false
+process_expression_data
+process_expression_data(folder_path = "ungrouped-mapping/ncbi-mapping/", output_file_path = "ungrouped-mapping/ncbi-phageK-expression.tsv")
+```
+
+then process all files to get the DESeq2 object
+```{r}
+#| message: false
+#| warning: false
+process_dds
+ncbiDds <-  process_dds(metadata_file_path = "ungrouped-mapping/mapping-metadata.tsv", expression_file_path = "ungrouped-mapping/ncbi-phageK-expression.tsv")
+```
+
+Generate the expression matrix for the heatmap:
+
+```{r}
+#| message: false
+#| warning: false
+get_fold_change_matrix
+ncbiFoldChangeMatrix <- get_fold_change_matrix(ncbiDds)
+```
+
+Using the `ComplexHeatmap` library we will create a circular heatmap:
+
+```{r}
+#| message: false
+#| warning: false
+circular_heatmap
+circular_heatmap(ncbiFoldChangeMatrix, "figs/ncbi-heatmap.pdf")
+```
+
+![](figs/ncbi-heatmap.png)
+
+Similarly we will get the expression data in a tibble format:
+
+```{r}
+#| message: false
+#| warning: false
+get_fold_change_data
+ncbiFoldChangeData <- get_fold_change_data(ncbiDds)
+```
+
+So that we can make volvano plots from different timepoints:
+
+```{r}
+#| message: false
+#| warning: false
+volcano_plot
+volcano_plot(ncbiFoldChangeData, "figs/ncbi-volcanoes.png")
+```
+
+![](figs/ncbi-volcanoes.png)
+
+```{r}
+#| include: false
+ncbiHc <- hclust(dist(ncbiFoldChangeMatrix), method = "complete")
+
+cutree(ncbiHc, k = 3) |> 
+  as_tibble(rownames = "gene") |> 
+  filter(value == 3)
+```
+
+### Phanotate analysis
+
+```{r}
+#| message: false
+#| warning: false
+process_expression_data(folder_path = "ungrouped-mapping/phanotate-mapping/", output_file_path = "ungrouped-mapping/phanotate-expression.tsv")
+```
+
+```{r}
+#| message: false
+#| warning: false
+phanotateDds <- process_dds("ungrouped-mapping/mapping-metadata.tsv", "ungrouped-mapping/phanotate-expression.tsv")
+```
+
+
+```{r}
+phannotateFoldChMatrix <- get_fold_change_matrix(phanotateDds)
+```
+
+```{r}
+#| message: false
+#| warning: false
+circular_heatmap(phannotateFoldChMatrix, "figs/phanotate-heatmap.pdf")
+```
+
+![](figs/phanotate-heatmap.png)
+
+```{r}
+#| message: false
+#| warning: false
+phanotateFoldChangeData <- get_fold_change_data(phanotateDds) 
+```
+
+```{r}
+#| message: false
+#| warning: false
+volcano_plot(phanotateFoldChangeData, "figs/phanotate-volcanoes.pdf")
+```
+
+![](figs/phanotate-volcanoes.png)
+
+```{r}
+#| include: false
+phanotateHc <- hclust(dist(phannotateFoldChMatrix), method = "complete")
+
+cutree(phanotateHc, k = 3) |> 
+  as_tibble(rownames = "gene") |> 
+  filter(value == 3)
+```

@@ -1,0 +1,3 @@
+chrom	length	bases	mean	min	max
+NC_005880.2	148317	9449955	63.71	0	3017
+total	148317	9449955	63.71	0	3017
