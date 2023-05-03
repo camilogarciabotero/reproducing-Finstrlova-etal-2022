@@ -76,7 +76,45 @@ STAR --runMode alignReads\
 samtools index Aligned.sortedByCoord.out.bam
 ```
 
-### Counting expression
+## Counting expression
+
+### Counting expression for the coverage analysis
+
+We first split the alignment by the names of the grouped reads id
+(joining all replicates per group) from the manifest.
+
+``` bash
+samtools split -f %! ungrouped-mapping/grouped-mapping.out.bam
+```
+
+Later we generate the coverage data for each of the time points of the
+infection on the forward and reverse strand[^1]:
+
+``` bash
+for i in {2,5,10,20,30}; 
+do mosdepth -t 8 -f phageK-NC.fasta -R Newman-min${i} forward-newman-min-${i} -F 1812 grouped-mapping.out.bam; done
+
+for i in {2,5,10,20,30}; 
+do mosdepth -t 8 -f phageK-NC.fasta -R Newman-min${i} reverse-newman-min-${i} -i 16 grouped-mapping.out.bam; done
+```
+
+### Counting expression for the DE analysis
+
+We first split the alignment by the names of the ungrouped reads id from
+the manifest.
+
+``` bash
+samtools split -f %! ungrouped-mapping/ungrouped-mapping.out.bam
+```
+
+Then using `BamToCount` with each of the annotation files will generate
+a counts per library.
+
+``` bash
+for i in *; 
+do bamtocounts -r phageK-NC.fasta --coords -n --header <annotation>.gff3 ${i} > ${i}.tsv; 
+done
+```
 
 ## Coverage analysis
 
@@ -451,3 +489,6 @@ volcano_plot(phanotateFoldChangeData, "figs/phanotate-volcanoes.pdf")
 ```
 
 ![](figs/phanotate-volcanoes.png)
+
+[^1]: For applying this per strand:
+    https://github.com/brentp/mosdepth/issues/192
