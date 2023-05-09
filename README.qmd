@@ -168,6 +168,8 @@ ggplot(data, aes(x = start, y = timepoint, height = coverage)) +
 ggsave("figs/ridges-perbase.pdf", width = 9, height = 9, dpi = 200)
 ```
 
+![](figs/ridges-perbase.png)
+
 ## Differential gene expression analyses
 
 ### NCBI annotation
@@ -264,6 +266,14 @@ circular_heatmap(phannotateFoldChMatrix, "figs/phanotate-heatmap.pdf")
 ```
 
 ![](figs/phanotate-heatmap.png)
+
+We can also generate a linear heatmap as well:
+
+```{r}
+pdf(output_file, width = 10, height = 10)
+Heatmap(phannotateFoldChMatrix)
+```
+
 
 ```{r}
 #| message: false
