@@ -359,6 +359,8 @@ dev.off()
     quartz_off_screen 
                     2 
 
+![](figs/ncbi-plain-heatmap.png)
+
 Similarly we will get the expression data in a tibble format:
 
 ``` r
@@ -516,6 +518,8 @@ dev.off()
 
     quartz_off_screen 
                     2 
+
+![](figs/phanotate-plain-heatmap.png)
 
 ``` r
 phanotateFoldChangeData <- get_fold_change_data(phanotateDds) 

@@ -227,7 +227,7 @@ draw(ncbiHmap)
 dev.off()
 ```
 
-
+![](figs/ncbi-plain-heatmap.png)
 
 Similarly we will get the expression data in a tibble format:
 
@@ -303,6 +303,7 @@ draw(phanotateHmap)
 dev.off()
 ```
 
+![](figs/phanotate-plain-heatmap.png)
 
 ```{r}
 #| message: false
