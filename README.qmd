@@ -211,6 +211,24 @@ circular_heatmap(ncbiFoldChangeMatrix, "figs/ncbi-heatmap.pdf")
 
 ![](figs/ncbi-heatmap.png)
 
+We can also generate a linear heatmap as well:
+
+```{r}
+#| message: false
+#| warning: false
+pdf("figs/ncbi-plain-heatmap.pdf", width = 8, height = 10.8)
+col_order <- c('M2', 'M5', 'M10', 'M20', 'M30')
+colnames(ncbiFoldChangeMatrix) <- col_order
+ncbiHmap <- Heatmap(ncbiFoldChangeMatrix, 
+                         column_names_gp = grid::gpar(fontsize = 10),
+                         row_names_gp = grid::gpar(fontsize = 2.5),
+                         column_order = order(as.numeric(gsub("M", "", colnames(ncbiFoldChangeMatrix)))))
+draw(ncbiHmap)
+dev.off()
+```
+
+
+
 Similarly we will get the expression data in a tibble format:
 
 ```{r}
@@ -219,6 +237,8 @@ Similarly we will get the expression data in a tibble format:
 get_fold_change_data
 ncbiFoldChangeData <- get_fold_change_data(ncbiDds)
 ```
+
+
 
 So that we can make volvano plots from different timepoints:
 
@@ -270,8 +290,17 @@ circular_heatmap(phannotateFoldChMatrix, "figs/phanotate-heatmap.pdf")
 We can also generate a linear heatmap as well:
 
 ```{r}
-pdf(output_file, width = 10, height = 10)
-Heatmap(phannotateFoldChMatrix)
+#| message: false
+#| warning: false
+pdf("figs/phanotate-plain-heatmap.pdf", width = 8, height = 10.8)
+col_order <- c('M2', 'M5', 'M10', 'M20', 'M30')
+colnames(phannotateFoldChMatrix) <- col_order
+phanotateHmap <- Heatmap(phannotateFoldChMatrix, 
+                         column_names_gp = grid::gpar(fontsize = 10),
+                         row_names_gp = grid::gpar(fontsize = 2.5),
+                         column_order = order(as.numeric(gsub("M", "", colnames(phannotateFoldChMatrix)))))
+draw(phanotateHmap)
+dev.off()
 ```
 
 

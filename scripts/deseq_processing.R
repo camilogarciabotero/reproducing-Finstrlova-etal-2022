@@ -170,6 +170,7 @@ circular_heatmap <- function(foldChangeMatrix, output_file) {
   circos.heatmap(foldChangeMatrix,
     col = col_fun1, split = 3, show.sector.labels = TRUE, rownames.side = "outside",
     dend.side = "inside",
+    order(as.numeric(gsub("M", "", colnames(foldChangeMatrix)))),
     dend.callback = function(dend, m, si) {
       dendsort(dend)
     },
