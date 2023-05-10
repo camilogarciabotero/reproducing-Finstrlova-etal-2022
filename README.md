@@ -181,6 +181,8 @@ ggplot(data, aes(x = start, y = timepoint, height = coverage)) +
 ggsave("figs/ridges-perbase.pdf", width = 9, height = 9, dpi = 200)
 ```
 
+![](figs/ridges-perbase.png)
+
 ## Differential gene expression analyses
 
 ### NCBI annotation
@@ -322,7 +324,8 @@ circular_heatmap
         lgd <- Legend(title = "Expression", col_fun = col_fun1)
         circos.heatmap(foldChangeMatrix, col = col_fun1, split = 3, 
             show.sector.labels = TRUE, rownames.side = "outside", 
-            dend.side = "inside", dend.callback = function(dend, 
+            dend.side = "inside", order(as.numeric(gsub("M", "", 
+                colnames(foldChangeMatrix)))), dend.callback = function(dend, 
                 m, si) {
                 dendsort(dend)
             }, track.height = 0.2)
@@ -338,6 +341,23 @@ circular_heatmap(ncbiFoldChangeMatrix, "figs/ncbi-heatmap.pdf")
                     2 
 
 ![](figs/ncbi-heatmap.png)
+
+We can also generate a linear heatmap as well:
+
+``` r
+pdf("figs/ncbi-plain-heatmap.pdf", width = 8, height = 10.8)
+col_order <- c('M2', 'M5', 'M10', 'M20', 'M30')
+colnames(ncbiFoldChangeMatrix) <- col_order
+ncbiHmap <- Heatmap(ncbiFoldChangeMatrix, 
+                         column_names_gp = grid::gpar(fontsize = 10),
+                         row_names_gp = grid::gpar(fontsize = 2.5),
+                         column_order = order(as.numeric(gsub("M", "", colnames(ncbiFoldChangeMatrix)))))
+draw(ncbiHmap)
+dev.off()
+```
+
+    quartz_off_screen 
+                    2 
 
 Similarly we will get the expression data in a tibble format:
 
@@ -479,6 +499,23 @@ circular_heatmap(phannotateFoldChMatrix, "figs/phanotate-heatmap.pdf")
                     2 
 
 ![](figs/phanotate-heatmap.png)
+
+We can also generate a linear heatmap as well:
+
+``` r
+pdf("figs/phanotate-plain-heatmap.pdf", width = 8, height = 10.8)
+col_order <- c('M2', 'M5', 'M10', 'M20', 'M30')
+colnames(phannotateFoldChMatrix) <- col_order
+phanotateHmap <- Heatmap(phannotateFoldChMatrix, 
+                         column_names_gp = grid::gpar(fontsize = 10),
+                         row_names_gp = grid::gpar(fontsize = 2.5),
+                         column_order = order(as.numeric(gsub("M", "", colnames(phannotateFoldChMatrix)))))
+draw(phanotateHmap)
+dev.off()
+```
+
+    quartz_off_screen 
+                    2 
 
 ``` r
 phanotateFoldChangeData <- get_fold_change_data(phanotateDds) 
